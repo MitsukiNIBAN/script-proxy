@@ -32,9 +32,37 @@ func updateSub(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, string(message))
 }
 
+func tproxyConfigPath(w http.ResponseWriter, r *http.Request) {
+	var code int
+	var message string
+	if r.Method == "GET" {
+		r.ParseForm()
+		code, message = obtainConfigPath()
+	} else {
+		code, message = 403, "Error"
+	}
+	w.WriteHeader(code)
+	fmt.Fprintf(w, string(message))
+}
+
+func tproxyConfig(w http.ResponseWriter, r *http.Request) {
+	var code int
+	var message string
+	if r.Method == "GET" {
+		r.ParseForm()
+		code, message = obtainConfig(r.Form["path"][0])
+	} else {
+		code, message = 403, "Error"
+	}
+	w.WriteHeader(code)
+	fmt.Fprintf(w, string(message))
+}
+
 func main() {
 	http.Handle("/", http.FileServer(http.Dir("./"))) //首页路由
 	http.HandleFunc("/subConfig", subConfig)          //保存订阅配置
 	http.HandleFunc("/updateSub", updateSub)          //更新订阅
-	http.ListenAndServe(":80", nil)                   // 设置监听的端口
+	http.HandleFunc("/tproxyConfigPath", tproxyConfigPath)
+	http.HandleFunc("/tproxyConfig", tproxyConfig)
+	http.ListenAndServe(":80", nil) // 设置监听的端口
 }

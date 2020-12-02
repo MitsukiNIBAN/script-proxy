@@ -7,6 +7,8 @@ import (
 	"net/http"
 )
 
+var configFile = "sub.temp"
+
 type Sub struct {
 	Url  string `json:"url"`
 	Path string `json:"path"`
@@ -25,7 +27,7 @@ func saveSubConfig(url string, path string) (code int, message string) {
 	if err != nil {
 		return 500, err.Error()
 	}
-	err = ioutil.WriteFile("./sub", jsonBytes, 0644)
+	err = ioutil.WriteFile("./"+configFile, jsonBytes, 0644)
 
 	if err != nil {
 		return 500, err.Error()
@@ -35,7 +37,7 @@ func saveSubConfig(url string, path string) (code int, message string) {
 }
 
 func obtainSubConfig() (code int, message string) {
-	content, err := ioutil.ReadFile("./sub")
+	content, err := ioutil.ReadFile("./" + configFile)
 	if err != nil {
 		return 500, err.Error()
 	}
@@ -43,7 +45,7 @@ func obtainSubConfig() (code int, message string) {
 }
 
 func updateConfig() (code int, message string) {
-	content, err := ioutil.ReadFile("./sub")
+	content, err := ioutil.ReadFile("./" + configFile)
 	if err != nil {
 		return 500, err.Error()
 	}
