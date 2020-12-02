@@ -1,0 +1,22 @@
+<html>
+<head>
+<title></title>
+</head>
+<body>
+<form action="/subConfig" method="POST" target="posthere">
+    订阅地址:<input type="text" name="url">
+    配置存储路径:<input type="text" name="path">
+    <input type="submit" value="保存配置">
+</form>
+
+<form action="/subConfig" method="GET" target="posthere">
+    <input type="submit" value="获取配置">
+</form>
+
+<form action="/updateSub" method="GET" target="posthere">
+    <input type="submit" value="更新订阅">
+</form>
+
+<iframe name="posthere" frameborder=0 width=0 height=0></iframe>
+</body>
+</html>

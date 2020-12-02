@@ -1,2 +1,2 @@
-# script-proxy
-方便个人搭建代理的工具脚本
+# go-proxy
+用go搭建的简易代理管理后端
