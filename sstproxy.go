@@ -9,8 +9,6 @@ import (
 	"strings"
 )
 
-var pathFile = "path.temp"
-
 type Config struct {
 	Mode               string `json:"mode"`
 	Tcponly            bool   `json:"tcponly"`
@@ -44,7 +42,7 @@ func isRunning() bool {
 }
 
 func obtainConfigPath() (code int, message string) {
-	content, err := ioutil.ReadFile("./" + pathFile)
+	content, err := ioutil.ReadFile("./" + StpcTempFile)
 	if err != nil {
 		return 500, err.Error()
 	}
@@ -52,7 +50,7 @@ func obtainConfigPath() (code int, message string) {
 }
 
 func obtainConfig(path string) (code int, message string) {
-	err := ioutil.WriteFile("./"+pathFile, []byte(path), 0644)
+	err := ioutil.WriteFile("./"+StpcTempFile, []byte(path), 0644)
 	if err != nil {
 		return 500, err.Error()
 	}

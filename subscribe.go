@@ -10,8 +10,6 @@ import (
 	"strings"
 )
 
-var configFile = "sub.temp"
-
 type Sub struct {
 	Url  string `json:"url"`
 	Path string `json:"path"`
@@ -34,47 +32,59 @@ type V2ray struct {
 func saveSubConfig(url string, path string) (code int, message string) {
 	if len(url) == 0 {
 		return 403, "未填写订阅地址"
+	} else {
+		err := ioutil.WriteFile("./"+SubTempFile, []byte(url), 0644)
+		if err != nil {
+			return 500, err.Error()
+		}
 	}
 
 	if len(path) == 0 {
 		return 403, "未填写配置保存路径"
-	}
-
-	jsonBytes, err := json.Marshal(Sub{url, path})
-	if err != nil {
-		return 500, err.Error()
-	}
-	err = ioutil.WriteFile("./"+configFile, jsonBytes, 0644)
-
-	if err != nil {
-		return 500, err.Error()
+	} else {
+		err := ioutil.WriteFile("./"+ConfigSaveFolder, []byte(path), 0644)
+		if err != nil {
+			return 500, err.Error()
+		}
 	}
 
 	return 200, ""
 }
 
 func obtainSubConfig() (code int, message string) {
-	content, err := ioutil.ReadFile("./" + configFile)
+	url, err := ioutil.ReadFile("./" + SubTempFile)
 	if err != nil {
 		return 500, err.Error()
 	}
-	return 200, string(content)
+	path, err := ioutil.ReadFile("./" + ConfigSaveFolder)
+	if err != nil {
+		return 500, err.Error()
+	}
+	jsonBytes, err := json.Marshal(Sub{string(url), string(path)})
+	if err != nil {
+		return 500, err.Error()
+	}
+	return 200, string(jsonBytes)
 }
 
 func updateConfig() (code int, message string) {
-	content, err := ioutil.ReadFile("./" + configFile)
+	url, err := ioutil.ReadFile("./" + SubTempFile)
 	if err != nil {
 		return 500, err.Error()
 	}
-	var s Sub
-	json.Unmarshal(content, &s)
-	if len(s.Url) == 0 {
+	if len(string(url)) == 0 {
 		return 500, "缺少订阅地址"
 	}
-	if len(s.Path) == 0 {
+
+	folder, err := ioutil.ReadFile("./" + ConfigSaveFolder)
+	if err != nil {
+		return 500, err.Error()
+	}
+	if len(string(folder)) == 0 {
 		return 500, "缺少配置存储路径"
 	}
-	resp, err := http.Get(s.Url)
+
+	resp, err := http.Get(string(url))
 	if err != nil {
 		return 500, err.Error()
 	}
@@ -87,7 +97,6 @@ func updateConfig() (code int, message string) {
 		return 500, err.Error()
 	}
 
-	//这里拿到body后解析数据并写入文件
 	firstLevelSource, err := base64.StdEncoding.DecodeString(string(body))
 	if err != nil {
 		return 500, err.Error()
@@ -107,10 +116,10 @@ func updateConfig() (code int, message string) {
 			var v V2ray
 			json.Unmarshal(finalData, &v)
 			fileName := v.Add + "~" + strconv.Itoa(v.Port) + ".json"
-			ioutil.WriteFile(path.Join(s.Path, fileName), finalData, 0644)
+			ioutil.WriteFile(path.Join(string(folder), fileName), finalData, 0644)
 		}
 	} else {
-		return 500, "不支持的解析协议"
+		return 500, "不支持解析的协议"
 	}
 
 	return 200, ""
