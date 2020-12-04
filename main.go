@@ -16,6 +16,7 @@ func subConfig(w http.ResponseWriter, r *http.Request) {
 	} else {
 		code, message = 403, "Error"
 	}
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.WriteHeader(code)
 	fmt.Fprintf(w, string(message))
 }
@@ -28,6 +29,7 @@ func updateSub(w http.ResponseWriter, r *http.Request) {
 	} else {
 		code, message = 403, "Error"
 	}
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.WriteHeader(code)
 	fmt.Fprintf(w, string(message))
 }
@@ -41,6 +43,7 @@ func tproxyConfigPath(w http.ResponseWriter, r *http.Request) {
 	} else {
 		code, message = 403, "Error"
 	}
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.WriteHeader(code)
 	fmt.Fprintf(w, string(message))
 }
@@ -48,12 +51,13 @@ func tproxyConfigPath(w http.ResponseWriter, r *http.Request) {
 func tproxyConfig(w http.ResponseWriter, r *http.Request) {
 	var code int
 	var message string
-	if r.Method == "GET" {
+	if r.Method == "POST" {
 		r.ParseForm()
 		code, message = obtainConfig(r.Form["path"][0])
 	} else {
 		code, message = 403, "Error"
 	}
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.WriteHeader(code)
 	fmt.Fprintf(w, string(message))
 }

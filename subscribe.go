@@ -52,14 +52,8 @@ func saveSubConfig(url string, path string) (code int, message string) {
 }
 
 func obtainSubConfig() (code int, message string) {
-	url, err := ioutil.ReadFile("./" + SubTempFile)
-	if err != nil {
-		return 500, err.Error()
-	}
-	path, err := ioutil.ReadFile("./" + ConfigSaveFolder)
-	if err != nil {
-		return 500, err.Error()
-	}
+	url, _ := ioutil.ReadFile("./" + SubTempFile)
+	path, _ := ioutil.ReadFile("./" + ConfigSaveFolder)
 	jsonBytes, err := json.Marshal(Sub{string(url), string(path)})
 	if err != nil {
 		return 500, err.Error()
@@ -69,18 +63,12 @@ func obtainSubConfig() (code int, message string) {
 
 func updateConfig() (code int, message string) {
 	url, err := ioutil.ReadFile("./" + SubTempFile)
-	if err != nil {
-		return 500, err.Error()
-	}
-	if len(string(url)) == 0 {
+	if err != nil || len(string(url)) == 0 {
 		return 500, "缺少订阅地址"
 	}
 
 	folder, err := ioutil.ReadFile("./" + ConfigSaveFolder)
-	if err != nil {
-		return 500, err.Error()
-	}
-	if len(string(folder)) == 0 {
+	if err != nil || len(string(folder)) == 0 {
 		return 500, "缺少配置存储路径"
 	}
 
