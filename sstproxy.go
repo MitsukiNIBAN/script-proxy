@@ -2,10 +2,12 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"io"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"strings"
 )
 
@@ -23,25 +25,61 @@ type Config struct {
 	File_ignlist_ext   string `json:"file_ignlist_ext"`
 }
 
-//脚本整体状态
-func scriptStatus() {
-
+//启动
+func startScript() error {
+	cmd := exec.Command("sudo", "ss-tproxy", "start")
+	return cmd.Run()
 }
 
-func startScript() {
-
+//关闭
+func stopScript() error {
+	cmd := exec.Command("sudo", "ss-tproxy", "stop")
+	return cmd.Run()
 }
 
-func stopScript() {
-
+//运行状态
+func scriptStatus() (map[string]bool, error) {
+	var outInfo bytes.Buffer
+	cmd := exec.Command("sudo", "ss-tproxy", "status")
+	cmd.Stdout = &outInfo
+	err := cmd.Run()
+	if err != nil {
+		return nil, err
+	}
+	var temp = make(map[string]bool)
+	for _, s := range strings.Split(outInfo.String(), "\n") {
+		if strings.Contains(s, "mode") {
+			continue
+		}
+		var item = strings.Split(s, ":")
+		if len(item) != 2 {
+			continue
+		}
+		temp[item[0]] = strings.Contains(item[1], "running")
+	}
+	return temp, nil
 }
 
 //是否在正在运行
-func isRunning() bool {
-	return false
+func isRunning() (bool, error) {
+	status, err := scriptStatus()
+	if len(status) != 4 {
+		return false, err
+	}
+	var count = 0
+	for k, v := range status {
+		if strings.Contains(k, "pxy") {
+			continue
+		}
+		if v {
+			count++
+		}
+	}
+	return false, nil
 }
 
-func obtainConfigPath() (code int, message string) {
+//获取配置路径
+func obtainConfigPath() (int, string) {
 	content, err := ioutil.ReadFile("./" + StpcTempFile)
 	if err != nil {
 		return 500, err.Error()
@@ -49,10 +87,11 @@ func obtainConfigPath() (code int, message string) {
 	return 200, string(content)
 }
 
-func obtainConfig(path string) (code int, message string) {
+//读取配置
+func obtainConfig(path string) (int, string) {
 	err := ioutil.WriteFile("./"+StpcTempFile, []byte(path), 0644)
 	if err != nil {
-		return 500, err.Error()
+		return 500, "配置读取失败:" + err.Error()
 	}
 
 	file, err := os.OpenFile(path, os.O_RDWR, 0666)
@@ -126,4 +165,65 @@ func obtainConfig(path string) (code int, message string) {
 	}
 
 	return 200, string(jsonBytes)
+}
+
+//控制启停
+func controlScript(isStartUp bool) (int, string) {
+	var msg string
+	if isStartUp {
+		msg = "脚本已启动"
+	} else {
+		msg = "脚本已停止"
+	}
+
+	runStatus, err := isRunning()
+	if err != nil {
+		return 500, "脚本运行状态获取失败:" + err.Error()
+	}
+	if runStatus == isStartUp {
+		return 200, msg
+	}
+
+	if isStartUp {
+		err := startScript()
+		if err != nil {
+			return 500, "启动脚本失败:" + err.Error()
+		}
+	} else {
+		err := stopScript()
+		if err != nil {
+			return 500, "停止脚本失败:" + err.Error()
+		}
+	}
+
+	return 200, msg
+}
+
+//获取状态
+func obtainStatus() (int, string) {
+	status, err := scriptStatus()
+	if err != nil {
+		return 500, err.Error()
+	}
+	jsonBytes, err := json.Marshal(status)
+	if err != nil {
+		return 500, err.Error()
+	}
+	return 200, string(jsonBytes)
+}
+
+//保存配置
+func saveConf(data string) (int, string) {
+	runningStatus, err := isRunning()
+	if err != nil {
+		return 500, err.Error()
+	}
+
+	if runningStatus {
+		return 500, "脚本正在运行中"
+	}
+
+	//备份，修改
+
+	return 200, ""
 }

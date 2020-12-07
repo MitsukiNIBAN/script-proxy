@@ -29,7 +29,7 @@ type V2ray struct {
 	Type string `json:"type"`
 }
 
-func saveSubConfig(url string, path string) (code int, message string) {
+func saveSubConfig(url string, path string) (int, string) {
 	if len(url) == 0 {
 		return 403, "未填写订阅地址"
 	} else {
@@ -51,7 +51,7 @@ func saveSubConfig(url string, path string) (code int, message string) {
 	return 200, ""
 }
 
-func obtainSubConfig() (code int, message string) {
+func obtainSubConfig() (int, string) {
 	url, _ := ioutil.ReadFile("./" + SubTempFile)
 	path, _ := ioutil.ReadFile("./" + ConfigSaveFolder)
 	jsonBytes, err := json.Marshal(Sub{string(url), string(path)})
@@ -61,7 +61,7 @@ func obtainSubConfig() (code int, message string) {
 	return 200, string(jsonBytes)
 }
 
-func updateConfig() (code int, message string) {
+func updateConfig() (int, string) {
 	url, err := ioutil.ReadFile("./" + SubTempFile)
 	if err != nil || len(string(url)) == 0 {
 		return 500, "缺少订阅地址"
