@@ -93,6 +93,7 @@ func tproxyControl(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	fmt.Println("start")
 	http.Handle("/", http.FileServer(http.Dir("./")))      //首页路由
 	http.HandleFunc("/subConfig", subConfig)               //保存订阅配置
 	http.HandleFunc("/updateSub", updateSub)               //更新订阅
@@ -106,5 +107,8 @@ func main() {
 	//脚本运行状态信息
 	//主要执行脚本后针对返回的信息进行解析相关的数据
 
-	http.ListenAndServe(":80", nil) // 设置监听的端口
+	err := http.ListenAndServe(":80", nil) // 设置监听的端口
+	if err != nil {
+		fmt.Println(err.Error())
+	}
 }

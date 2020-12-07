@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"path"
 	"strconv"
 	"strings"
@@ -70,6 +71,23 @@ func updateConfig() (int, string) {
 	folder, err := ioutil.ReadFile("./" + ConfigSaveFolder)
 	if err != nil || len(string(folder)) == 0 {
 		return 500, "缺少配置存储路径"
+	}
+
+	s, err := os.Stat(string(folder))
+
+	if err != nil {
+		//存在文件 or 文件夹
+		if os.IsExist(err) {
+			return 500, "该目录下已存在同名文件"
+		} else {
+			if os.MkdirAll(string(folder), os.ModePerm) != nil {
+				return 500, "存储目录创建失败"
+			}
+		}
+	} else {
+		if !s.IsDir() {
+			return 500, "该目录下已存在同名文件"
+		}
 	}
 
 	resp, err := http.Get(string(url))
