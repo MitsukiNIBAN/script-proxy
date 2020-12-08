@@ -75,14 +75,14 @@ func isRunning() (bool, error) {
 			count++
 		}
 	}
-	return false, nil
+	return count == 3, nil
 }
 
 //获取配置路径
 func obtainConfigPath() (int, string) {
 	content, err := ioutil.ReadFile("./" + StpcTempFile)
 	if err != nil {
-		return 500, err.Error()
+		return 500, "获取配置路径失败:" + err.Error()
 	}
 	return 200, string(content)
 }
@@ -96,7 +96,7 @@ func obtainConfig(path string) (int, string) {
 
 	file, err := os.OpenFile(path, os.O_RDWR, 0666)
 	if err != nil {
-		return 500, "Read config error:" + err.Error()
+		return 500, "配置读取失败:" + err.Error()
 	}
 	defer file.Close()
 
@@ -154,14 +154,14 @@ func obtainConfig(path string) (int, string) {
 			if err == io.EOF {
 				break
 			} else {
-				return 500, "Read config error:" + err.Error()
+				return 500, "配置读取失败:" + err.Error()
 			}
 		}
 	}
 
 	jsonBytes, err := json.Marshal(config)
 	if err != nil {
-		return 500, err.Error()
+		return 500, "配置读取失败:" + err.Error()
 	}
 
 	return 200, string(jsonBytes)
@@ -203,11 +203,11 @@ func controlScript(isStartUp bool) (int, string) {
 func obtainStatus() (int, string) {
 	status, err := scriptStatus()
 	if err != nil {
-		return 500, err.Error()
+		return 500, "获取状态失败:" + err.Error()
 	}
 	jsonBytes, err := json.Marshal(status)
 	if err != nil {
-		return 500, err.Error()
+		return 500, "获取状态失败:" + err.Error()
 	}
 	return 200, string(jsonBytes)
 }
@@ -216,14 +216,125 @@ func obtainStatus() (int, string) {
 func saveConf(data string) (int, string) {
 	runningStatus, err := isRunning()
 	if err != nil {
-		return 500, err.Error()
+		return 500, "保存配置失败:" + err.Error()
 	}
 
 	if runningStatus {
-		return 500, "脚本正在运行中"
+		return 500, "保存配置失败:脚本正在运行中"
 	}
 
-	//备份，修改
+	filePath, err := ioutil.ReadFile("./" + StpcTempFile)
+	if err != nil {
+		return 500, "保存配置失败:" + err.Error()
+	}
 
+	var config Config
+	err = json.Unmarshal([]byte(data), &config)
+	if err != nil {
+		return 500, "保存配置失败:" + err.Error()
+	}
+
+	f, err := os.OpenFile(string(filePath), os.O_RDONLY, 0644)
+	if err != nil {
+		f.Close()
+		return 500, "保存配置失败:" + err.Error()
+	}
+	reader := bufio.NewReader(f)
+
+	var outStr = ""
+	for {
+		line, err := reader.ReadString('\n')
+		line = strings.TrimSpace(line)
+
+		if strings.Contains(line, "tcponly=") {
+			var temp = ""
+			if config.Tcponly {
+				temp = "true"
+			} else {
+				temp = "false"
+			}
+			line = line[0:strings.Index(line, "'")+1] + temp + line[strings.LastIndex(line, "'"):len(line)]
+		}
+
+		if strings.Contains(line, "selfonly=") {
+			var temp = ""
+			if config.Selfonly {
+				temp = "true"
+			} else {
+				temp = "false"
+			}
+			line = line[0:strings.Index(line, "'")+1] + temp + line[strings.LastIndex(line, "'"):len(line)]
+		}
+
+		if strings.Contains(line, "proxy_svraddr4=") {
+			line = line[0:strings.Index(line, "(")+1] + config.Proxy_svraddr4 + line[strings.LastIndex(line, ")"):len(line)]
+		}
+
+		if strings.Contains(line, "proxy_svrport=") {
+			line = line[0:strings.Index(line, "'")+1] + config.Proxy_svrport + line[strings.LastIndex(line, "'"):len(line)]
+		}
+
+		if strings.Contains(line, "proxy_startcmd=") {
+			line = line[0:strings.Index(line, "'")+1] + config.Proxy_startcmd + line[strings.LastIndex(line, "'"):len(line)]
+		}
+
+		if strings.Contains(line, "proxy_stopcmd=") {
+			line = line[0:strings.Index(line, "'")+1] + config.Proxy_stopcmd + line[strings.LastIndex(line, "'"):len(line)]
+		}
+
+		if strings.Contains(line, "dnsmasq_log_enable=") {
+			var temp = ""
+			if config.Dnsmasq_log_enable {
+				temp = "true"
+			} else {
+				temp = "false"
+			}
+			line = line[0:strings.Index(line, "'")+1] + temp + line[strings.LastIndex(line, "'"):len(line)]
+		}
+
+		if strings.Contains(line, "chinadns_verbose=") {
+			var temp = ""
+			if config.Chinadns_verbose {
+				temp = "true"
+			} else {
+				temp = "false"
+			}
+			line = line[0:strings.Index(line, "'")+1] + temp + line[strings.LastIndex(line, "'"):len(line)]
+		}
+
+		if strings.Contains(line, "dns2tcp_verbose=") {
+			var temp = ""
+			if config.Dns2tcp_verbose {
+				temp = "true"
+			} else {
+				temp = "false"
+			}
+			line = line[0:strings.Index(line, "'")+1] + temp + line[strings.LastIndex(line, "'"):len(line)]
+		}
+
+		outStr = outStr + line + "\n"
+
+		if err != nil {
+			if err == io.EOF {
+				break
+			} else {
+				return 500, "保存配置失败:" + err.Error()
+			}
+		}
+	}
+	f.Close()
+
+	f, err = os.OpenFile(string(filePath), os.O_WRONLY|os.O_TRUNC, 0600)
+	if err != nil {
+		return 500, "保存配置失败:" + err.Error()
+	}
+	defer f.Close()
+
+	writer := bufio.NewWriter(f)
+	_, err = writer.Write([]byte(outStr))
+	if err != nil {
+		return 500, "保存配置失败:" + err.Error()
+	}
+	writer.Flush()
 	return 200, ""
 }

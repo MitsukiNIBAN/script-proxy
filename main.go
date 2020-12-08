@@ -92,6 +92,75 @@ func tproxyControl(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, string(message))
 }
 
+func v2rayConfigPath(w http.ResponseWriter, r *http.Request) {
+	var code int
+	var message string
+	if r.Method == "GET" {
+		r.ParseForm()
+		code, message = obtainV2rayConfigPath()
+	} else if r.Method == "POST" {
+		r.ParseForm()
+		code, message = saveV2rayConfigPath(r.Form["path"][0])
+	} else {
+		code, message = 403, "Error"
+	}
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.WriteHeader(code)
+	fmt.Fprintf(w, string(message))
+}
+
+func v2rayStatus(w http.ResponseWriter, r *http.Request) {
+	var code int
+	var message string
+	if r.Method == "GET" {
+		code, message = obtainV2rayStatus()
+	} else {
+		code, message = 403, "Error"
+	}
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.WriteHeader(code)
+	fmt.Fprintf(w, string(message))
+}
+
+func v2rayControl(w http.ResponseWriter, r *http.Request) {
+	var code int
+	var message string
+	if r.Method == "POST" {
+		code, message = controlV2ray(strings.Contains(r.URL.String(), "Start"))
+	} else {
+		code, message = 403, "Error"
+	}
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.WriteHeader(code)
+	fmt.Fprintf(w, string(message))
+}
+
+func serverSet(w http.ResponseWriter, r *http.Request) {
+	var code int
+	var message string
+	if r.Method == "GET" {
+		code, message = obtainServerSet()
+	} else {
+		code, message = 403, "Error"
+	}
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.WriteHeader(code)
+	fmt.Fprintf(w, string(message))
+}
+
+func portSet(w http.ResponseWriter, r *http.Request) {
+	var code int
+	var message string
+	if r.Method == "GET" {
+		code, message = obtainPortSet()
+	} else {
+		code, message = 403, "Error"
+	}
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.WriteHeader(code)
+	fmt.Fprintf(w, string(message))
+}
+
 func main() {
 	fmt.Println("start")
 	http.Handle("/", http.FileServer(http.Dir("./")))      //首页路由
@@ -102,10 +171,12 @@ func main() {
 	http.HandleFunc("/tproxyStatus", tproxyStatus)         //获取脚本状态
 	http.HandleFunc("/tproxyStart", tproxyControl)         //启动脚本
 	http.HandleFunc("/tproxyStop", tproxyControl)          //关闭脚本
-
-	//脚本是否正在运行中
-	//脚本运行状态信息
-	//主要执行脚本后针对返回的信息进行解析相关的数据
+	http.HandleFunc("/v2rayConfigPath", v2rayConfigPath)   //v2ray配置文件
+	http.HandleFunc("/v2rayStatus", v2rayStatus)           //v2ray进程状态
+	http.HandleFunc("/v2rayStart", v2rayControl)           //启动v2ray进程
+	http.HandleFunc("/v2rayStop", v2rayControl)            //关闭v2ray进程
+	http.HandleFunc("/serverSet", v2rayControl)            //尝试获取服务器集合
+	http.HandleFunc("/portSet", v2rayControl)              //尝试获取端口集合
 
 	err := http.ListenAndServe(":80", nil) // 设置监听的端口
 	if err != nil {
