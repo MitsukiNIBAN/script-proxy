@@ -177,7 +177,7 @@ func obtainPortSet() (int, string) {
 			if len(portStr) <= 0 {
 				portStr = portStr + p
 			} else {
-				portStr = portStr + " " + p
+				portStr = portStr + "," + p
 			}
 		}
 	}

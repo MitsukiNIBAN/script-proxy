@@ -175,8 +175,8 @@ func main() {
 	http.HandleFunc("/v2rayStatus", v2rayStatus)           //v2ray进程状态
 	http.HandleFunc("/v2rayStart", v2rayControl)           //启动v2ray进程
 	http.HandleFunc("/v2rayStop", v2rayControl)            //关闭v2ray进程
-	http.HandleFunc("/serverSet", v2rayControl)            //尝试获取服务器集合
-	http.HandleFunc("/portSet", v2rayControl)              //尝试获取端口集合
+	http.HandleFunc("/serverSet", serverSet)               //尝试获取服务器集合
+	http.HandleFunc("/portSet", portSet)                   //尝试获取端口集合
 
 	err := http.ListenAndServe(":80", nil) // 设置监听的端口
 	if err != nil {
