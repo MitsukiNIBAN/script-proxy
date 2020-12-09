@@ -107,6 +107,19 @@ func v2rayConfigPath(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, string(message))
 }
 
+func v2rayConfigInfo(w http.ResponseWriter, r *http.Request) {
+	var code int
+	var message string
+	if r.Method == "GET" {
+		code, message = obtainCurrentProxyName()
+	} else {
+		code, message = 403, "Error"
+	}
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.WriteHeader(code)
+	fmt.Fprintf(w, string(message))
+}
+
 func v2rayStatus(w http.ResponseWriter, r *http.Request) {
 	var code int
 	var message string
@@ -197,6 +210,7 @@ func main() {
 	http.HandleFunc("/tproxyStart", tproxyControl)         //启动脚本
 	http.HandleFunc("/tproxyStop", tproxyControl)          //关闭脚本
 	http.HandleFunc("/v2rayConfigPath", v2rayConfigPath)   //v2ray配置文件
+	http.HandleFunc("/v2rayConfigInfo", v2rayConfigInfo)   //v2ray配置简息
 	http.HandleFunc("/v2rayConfig", v2rayConfig)           //切换v2ray配置
 	http.HandleFunc("/v2rayStatus", v2rayStatus)           //v2ray进程状态
 	http.HandleFunc("/v2rayStart", v2rayControl)           //启动v2ray进程
