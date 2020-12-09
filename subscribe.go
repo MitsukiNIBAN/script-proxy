@@ -183,3 +183,26 @@ func obtainPortSet() (int, string) {
 	}
 	return 200, portStr
 }
+
+func obtainConfigSet() (int, string) {
+	dirPth, err := ioutil.ReadFile("./" + ConfigSaveFolder)
+	if err != nil {
+		return 500, err.Error()
+	}
+	dir, err := ioutil.ReadDir(string(dirPth))
+	if err != nil {
+		return 500, err.Error()
+	}
+
+	setStr := ""
+	for _, fi := range dir {
+		content, _ := ioutil.ReadFile(path.Join(string(dirPth), fi.Name()))
+		if len(setStr) <= 0 {
+			setStr = setStr + string(content)
+		} else {
+			setStr = setStr + "," + string(content)
+		}
+	}
+
+	return 200, "[" + setStr + "]"
+}

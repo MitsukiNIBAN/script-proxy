@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"io/ioutil"
 	"os/exec"
 	"strings"
@@ -87,4 +88,23 @@ func controlV2ray(isStartUp bool) (int, string) {
 	}
 
 	return 200, msg
+}
+
+func modifyV2rayConfig(url string) (int, string) {
+	content, err := ioutil.ReadFile("./" + V2rayTempFile)
+	if err != nil {
+		return 500, "修改Vray配置失败:" + err.Error()
+	}
+	config, err := ioutil.ReadFile(string(content))
+	if err != nil {
+		return 500, "修改Vray配置失败:" + err.Error()
+	}
+
+	var v2ray V2ray
+	err = json.Unmarshal(config, &v2ray)
+	if err != nil {
+		return 500, "修改Vray配置失败:" + err.Error()
+	}
+
+	return 200, ""
 }

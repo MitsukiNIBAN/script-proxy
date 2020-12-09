@@ -39,7 +39,6 @@ func tproxyConfigPath(w http.ResponseWriter, r *http.Request) {
 	var code int
 	var message string
 	if r.Method == "GET" {
-		r.ParseForm()
 		code, message = obtainConfigPath()
 	} else {
 		code, message = 403, "Error"
@@ -96,7 +95,6 @@ func v2rayConfigPath(w http.ResponseWriter, r *http.Request) {
 	var code int
 	var message string
 	if r.Method == "GET" {
-		r.ParseForm()
 		code, message = obtainV2rayConfigPath()
 	} else if r.Method == "POST" {
 		r.ParseForm()
@@ -161,6 +159,33 @@ func portSet(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, string(message))
 }
 
+func configSet(w http.ResponseWriter, r *http.Request) {
+	var code int
+	var message string
+	if r.Method == "GET" {
+		code, message = obtainConfigSet()
+	} else {
+		code, message = 403, "Error"
+	}
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.WriteHeader(code)
+	fmt.Fprintf(w, string(message))
+}
+
+func v2rayConfig(w http.ResponseWriter, r *http.Request) {
+	var code int
+	var message string
+	if r.Method == "POST" {
+		r.ParseForm()
+		code, message = modifyV2rayConfig(r.Form["data"][0])
+	} else {
+		code, message = 403, "Error"
+	}
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.WriteHeader(code)
+	fmt.Fprintf(w, string(message))
+}
+
 func main() {
 	fmt.Println("start")
 	http.Handle("/", http.FileServer(http.Dir("./")))      //首页路由
@@ -172,11 +197,13 @@ func main() {
 	http.HandleFunc("/tproxyStart", tproxyControl)         //启动脚本
 	http.HandleFunc("/tproxyStop", tproxyControl)          //关闭脚本
 	http.HandleFunc("/v2rayConfigPath", v2rayConfigPath)   //v2ray配置文件
+	http.HandleFunc("/v2rayConfig", v2rayConfig)           //切换v2ray配置
 	http.HandleFunc("/v2rayStatus", v2rayStatus)           //v2ray进程状态
 	http.HandleFunc("/v2rayStart", v2rayControl)           //启动v2ray进程
 	http.HandleFunc("/v2rayStop", v2rayControl)            //关闭v2ray进程
 	http.HandleFunc("/serverSet", serverSet)               //尝试获取服务器集合
 	http.HandleFunc("/portSet", portSet)                   //尝试获取端口集合
+	http.HandleFunc("/configSet", configSet)               //获取配置集合
 
 	err := http.ListenAndServe(":80", nil) // 设置监听的端口
 	if err != nil {
