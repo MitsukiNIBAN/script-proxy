@@ -80,7 +80,7 @@ func isRunning() (bool, error) {
 
 //获取配置路径
 func obtainConfigPath() (int, string) {
-	content, err := ioutil.ReadFile("./" + StpcTempFile)
+	content, err := ioutil.ReadFile(stpcTempFilePath())
 	if err != nil {
 		return 500, "获取配置路径失败:" + err.Error()
 	}
@@ -89,7 +89,7 @@ func obtainConfigPath() (int, string) {
 
 //读取配置
 func obtainConfig(path string) (int, string) {
-	err := ioutil.WriteFile("./"+StpcTempFile, []byte(path), 0644)
+	err := ioutil.WriteFile(stpcTempFilePath(), []byte(path), 0644)
 	if err != nil {
 		return 500, "配置读取失败:" + err.Error()
 	}
@@ -223,7 +223,7 @@ func saveConf(data string) (int, string) {
 		return 500, "保存配置失败:脚本正在运行中"
 	}
 
-	filePath, err := ioutil.ReadFile("./" + StpcTempFile)
+	filePath, err := ioutil.ReadFile(stpcTempFilePath())
 	if err != nil {
 		return 500, "保存配置失败:" + err.Error()
 	}

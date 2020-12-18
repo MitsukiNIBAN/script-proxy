@@ -1,0 +1,10 @@
+[Unit]
+Description=Go Proxy Service
+After=ss-tproxy.service v2ray.service
+
+[Service]
+ExecStart=/usr/local/bin/proxygo
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

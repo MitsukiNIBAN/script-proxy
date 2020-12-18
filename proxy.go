@@ -104,7 +104,7 @@ func isV2rayRunning() string {
 }
 
 func obtainV2rayConfigPath() (int, string) {
-	content, err := ioutil.ReadFile("./" + V2rayTempFile)
+	content, err := ioutil.ReadFile(v2rayTempFilePath())
 	if err != nil {
 		return 500, "获取配置路径失败:" + err.Error()
 	}
@@ -115,7 +115,7 @@ func saveV2rayConfigPath(path string) (int, string) {
 	if len(path) == 0 {
 		return 403, "配置保存失败:未填写配置路径"
 	} else {
-		err := ioutil.WriteFile("./"+V2rayTempFile, []byte(path), 0644)
+		err := ioutil.WriteFile(v2rayTempFilePath(), []byte(path), 0644)
 		if err != nil {
 			return 500, "配置保存失败:" + err.Error()
 		}
@@ -156,7 +156,7 @@ func controlV2ray(isStartUp bool) (int, string) {
 }
 
 func obtainCurrentProxyName() (int, string) {
-	content, err := ioutil.ReadFile("./" + V2rayTempFile)
+	content, err := ioutil.ReadFile(v2rayTempFilePath())
 	if err != nil {
 		return 500, "获取代理信息失败:" + err.Error()
 	}
@@ -165,7 +165,7 @@ func obtainCurrentProxyName() (int, string) {
 		return 500, "获取代理信息失败:" + err.Error()
 	}
 
-	folder, err := ioutil.ReadFile("./" + ConfigSaveFolder)
+	folder, err := ioutil.ReadFile(configSaveFolderTempFilePath())
 	if err != nil {
 		return 500, "配置获取失败:" + err.Error()
 	}
@@ -198,7 +198,7 @@ func modifyV2rayConfig(data string) (int, string) {
 		return 500, "修改Vray配置失败:代理进程未停止"
 	}
 
-	configPath, err := ioutil.ReadFile("./" + V2rayTempFile)
+	configPath, err := ioutil.ReadFile(v2rayTempFilePath())
 	if err != nil {
 		return 500, "修改Vray配置失败:" + err.Error()
 	}

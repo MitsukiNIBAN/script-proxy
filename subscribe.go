@@ -34,7 +34,7 @@ func saveSubConfig(url string, path string) (int, string) {
 	if len(url) == 0 {
 		return 403, "配置保存失败:未填写订阅地址"
 	} else {
-		err := ioutil.WriteFile("./"+SubTempFile, []byte(url), 0644)
+		err := ioutil.WriteFile(subTempFilePath(), []byte(url), 0644)
 		if err != nil {
 			return 500, "配置保存失败:" + err.Error()
 		}
@@ -43,7 +43,7 @@ func saveSubConfig(url string, path string) (int, string) {
 	if len(path) == 0 {
 		return 403, "配置保存失败:未填写配置保存路径"
 	} else {
-		err := ioutil.WriteFile("./"+ConfigSaveFolder, []byte(path), 0644)
+		err := ioutil.WriteFile(configSaveFolderTempFilePath(), []byte(path), 0644)
 		if err != nil {
 			return 500, "配置保存失败:" + err.Error()
 		}
@@ -53,11 +53,11 @@ func saveSubConfig(url string, path string) (int, string) {
 }
 
 func obtainSubConfig() (int, string) {
-	url, err := ioutil.ReadFile("./" + SubTempFile)
+	url, err := ioutil.ReadFile(subTempFilePath())
 	if err != nil {
 		return 500, "配置获取失败:" + err.Error()
 	}
-	path, err := ioutil.ReadFile("./" + ConfigSaveFolder)
+	path, err := ioutil.ReadFile(configSaveFolderTempFilePath())
 	if err != nil {
 		return 500, "配置获取失败:" + err.Error()
 	}
@@ -69,12 +69,12 @@ func obtainSubConfig() (int, string) {
 }
 
 func updateConfig() (int, string) {
-	url, err := ioutil.ReadFile("./" + SubTempFile)
+	url, err := ioutil.ReadFile(subTempFilePath())
 	if err != nil || len(string(url)) == 0 {
 		return 500, "更新订阅失败:缺少订阅地址"
 	}
 
-	folder, err := ioutil.ReadFile("./" + ConfigSaveFolder)
+	folder, err := ioutil.ReadFile(configSaveFolderTempFilePath())
 	if err != nil || len(string(folder)) == 0 {
 		return 500, "更新订阅失败:缺少配置存储路径"
 	}
@@ -132,7 +132,7 @@ func updateConfig() (int, string) {
 }
 
 func obtainServerSet() (int, string) {
-	dirPth, err := ioutil.ReadFile("./" + ConfigSaveFolder)
+	dirPth, err := ioutil.ReadFile(configSaveFolderTempFilePath())
 	if err != nil {
 		return 500, err.Error()
 	}
@@ -157,7 +157,7 @@ func obtainServerSet() (int, string) {
 }
 
 func obtainPortSet() (int, string) {
-	dirPth, err := ioutil.ReadFile("./" + ConfigSaveFolder)
+	dirPth, err := ioutil.ReadFile(configSaveFolderTempFilePath())
 	if err != nil {
 		return 500, err.Error()
 	}
@@ -185,7 +185,7 @@ func obtainPortSet() (int, string) {
 }
 
 func obtainConfigSet() (int, string) {
-	dirPth, err := ioutil.ReadFile("./" + ConfigSaveFolder)
+	dirPth, err := ioutil.ReadFile(configSaveFolderTempFilePath())
 	if err != nil {
 		return 500, err.Error()
 	}
