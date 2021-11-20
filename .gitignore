@@ -1,2 +1,5 @@
 *.temp
 *.exe
+*.conf
+.vscode
+.history
