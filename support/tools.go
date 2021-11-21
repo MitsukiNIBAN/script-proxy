@@ -3,6 +3,7 @@ package support
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"net/url"
@@ -11,6 +12,16 @@ import (
 	"strings"
 )
 
+func RepairConfig(path string) (map[string]string, error) {
+	data, err := LoadConfig(path)
+	if err != nil {
+		return data, err
+	}
+	err = SaveConfig(path, data)
+	return data, err
+}
+
+//后面的项会覆盖前面的项目
 func LoadConfig(path string) (map[string]string, error) {
 	data := make(map[string]string)
 
@@ -30,15 +41,17 @@ func LoadConfig(path string) (map[string]string, error) {
 		if strings.HasPrefix(line, "#") {
 			continue
 		}
-		kv := strings.Split(line, "=")
+
+		kv := strings.SplitAfterN(line, "=", 2)
 		if len(kv) < 2 {
 			continue
 		}
-		data[kv[0]] = kv[1]
+		data[kv[0][:len(kv[0])-1]] = kv[1]
 	}
 	return data, nil
 }
 
+//会覆盖所有配置
 func SaveConfig(path string, data map[string]string) error {
 	file, err := os.OpenFile(path, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0777)
 	if err != nil {
@@ -48,20 +61,23 @@ func SaveConfig(path string, data map[string]string) error {
 
 	w := bufio.NewWriter(file)
 	for k, v := range data {
-		//注意随时更新一下
-		if k == KeySsrSubUrl {
-			ssrSubUrl = v
-		}
-		if k == KeyV2raySubUrl {
-			v2raySubUrl = v
-		}
-		if k == KeySsrJsonCacheFolder {
-			ssrJsonCacheFolder = v
-		}
-		if k == KeyV2rayJsonCacheFolder {
-			v2rayJsonCacheFolder = v
-		}
+		updateConfigMemoryCache(k, v)
+		fmt.Fprintf(w, "%s=%s\n", k, v)
+	}
+	return w.Flush()
+}
 
+//在后面追加数据
+func AppendConfig(path string, data map[string]string) error {
+	file, err := os.OpenFile(path, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0777)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	w := bufio.NewWriter(file)
+	for k, v := range data {
+		updateConfigMemoryCache(k, v)
 		fmt.Fprintf(w, "%s=%s\n", k, v)
 	}
 	return w.Flush()
@@ -85,11 +101,16 @@ func GetValue(values url.Values, key string, def string) string {
 
 func ExecCommand(name string, arg ...string) (string, error) {
 	var outInfo bytes.Buffer
+	var stderr bytes.Buffer
 	cmd := exec.Command(name, arg...)
 	cmd.Stdout = &outInfo
+	cmd.Stderr = &stderr
 	err := cmd.Run()
 	if err != nil {
-		return "", err
+		errInfo := stderr.String()
+		if len(errInfo) > 0 {
+			return "", errors.New(err.Error() + ":" + errInfo)
+		}
 	}
 	return outInfo.String(), nil
 }

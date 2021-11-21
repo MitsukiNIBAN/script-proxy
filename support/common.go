@@ -5,24 +5,47 @@ import (
 	"path"
 )
 
-// import (
-// 	"os"
-// 	"path"
-// 	"path/filepath"
-// )
-
 const ConfigFileName string = "server.conf"
 const ConfigTempFile string = "config.temp"
+const V2rayConfigListCache string = "v2ray.temp"
+const SsrConfigListCache string = "ssr.temp"
 
 const KeySsrSubUrl string = "ssrSubUrl"
 const KeyV2raySubUrl string = "v2raySubUrl"
-const KeySsrJsonCacheFolder string = "ssrJsonCacheFolder"
-const KeyV2rayJsonCacheFolder string = "v2rayJsonCacheFolder"
+const KeyProxyJsonCacheFolder = "jsonCacheFolder"
+const KeyErrorLogFile = "errorLogFile"
+const KeyAccessLogFile = "accessLogFile"
+const KeyV2rayLogLevel = "v2rayLogLevel"
+const KeyV2rayConfigJsonPath = "v2rayConfigJsonPath"
+const KeyCurrentV2rayConfig = "currentV2rayConfig"
 
+var currentV2rayConfig string = ""
+var v2rayConfigJsonPath string = ""
+var v2rayLogLevel string = ""
+var errorLogFile string = ""
+var accessLogFile string = ""
 var ssrSubUrl string = ""
 var v2raySubUrl string = ""
-var ssrJsonCacheFolder string = ""
-var v2rayJsonCacheFolder string = ""
+var proxyJsonCacheFolder string = ""
+
+func updateConfigMemoryCache(k string, v string) {
+	switch k {
+	case KeySsrSubUrl:
+		ssrSubUrl = v
+	case KeyV2raySubUrl:
+		v2raySubUrl = v
+	case KeyProxyJsonCacheFolder:
+		proxyJsonCacheFolder = v
+	case KeyErrorLogFile:
+		errorLogFile = v
+	case KeyAccessLogFile:
+		accessLogFile = v
+	case KeyV2rayLogLevel:
+		v2rayLogLevel = v
+	case KeyV2rayConfigJsonPath:
+		v2rayConfigJsonPath = v
+	}
+}
 
 func loadConfigTempFile() map[string]string {
 	currentFolder, _ := os.Getwd()
@@ -47,43 +70,50 @@ func V2raySubUrl() string {
 	return v2raySubUrl
 }
 
-func SsrJsonCacheFolder() string {
-	if len(ssrJsonCacheFolder) <= 0 {
+func JsonCacheFolder() string {
+	if len(proxyJsonCacheFolder) <= 0 {
 		source := loadConfigTempFile()
-		ssrJsonCacheFolder = source[KeySsrJsonCacheFolder]
+		proxyJsonCacheFolder = source[KeyProxyJsonCacheFolder]
 	}
-	return ssrJsonCacheFolder
+	return proxyJsonCacheFolder
 }
 
-func V2rayJsonCacheFolder() string {
-	if len(v2rayJsonCacheFolder) <= 0 {
+func ErrorLogFile() string {
+	if len(errorLogFile) <= 0 {
 		source := loadConfigTempFile()
-		v2rayJsonCacheFolder = source[KeyV2rayJsonCacheFolder]
+		errorLogFile = source[KeyErrorLogFile]
 	}
-	return v2rayJsonCacheFolder
+	return path.Join(errorLogFile, "error.log")
 }
 
-// var tempCurrent string = ""
+func AccessLogFile() string {
+	if len(accessLogFile) <= 0 {
+		source := loadConfigTempFile()
+		accessLogFile = source[KeyAccessLogFile]
+	}
+	return path.Join(accessLogFile, "access.log")
+}
 
-// func currentFolder() string {
-// 	if len(tempCurrent) == 0 {
-// 		tempCurrent, _ = filepath.Abs(filepath.Dir(os.Args[0]))
-// 	}
-// 	return tempCurrent
-// }
+func V2rayLogLevel() string {
+	if len(v2rayLogLevel) <= 0 {
+		source := loadConfigTempFile()
+		v2rayLogLevel = source[KeyV2rayLogLevel]
+	}
+	return v2rayLogLevel
+}
 
-// func subTempFilePath() string {
-// 	return path.Join(currentFolder(), SubTempFile)
-// }
+func V2rayConfigJsonPath() string {
+	if len(v2rayConfigJsonPath) <= 0 {
+		source := loadConfigTempFile()
+		v2rayConfigJsonPath = source[KeyV2rayConfigJsonPath]
+	}
+	return v2rayConfigJsonPath
+}
 
-// func configSaveFolderTempFilePath() string {
-// 	return path.Join(currentFolder(), ConfigSaveFolder)
-// }
-
-// func v2rayTempFilePath() string {
-// 	return path.Join(currentFolder(), V2rayTempFile)
-// }
-
-// func stpcTempFilePath() string {
-// 	return path.Join(currentFolder(), StpcTempFile)
-// }
+func CurrentV2rayConfig() string {
+	if len(currentV2rayConfig) <= 0 {
+		source := loadConfigTempFile()
+		currentV2rayConfig = source[KeyCurrentV2rayConfig]
+	}
+	return currentV2rayConfig
+}
