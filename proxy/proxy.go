@@ -1,102 +1,88 @@
 package proxy
 
 import (
+	"encoding/json"
 	"errors"
 	"mmm3w/go-proxy/support"
-	"strings"
+	"path"
 )
 
-// func InitV2rayConfig(){
-
-// }
-
-func ApplyRule(isEnable bool) error {
-	var err error
-	if isEnable {
-		_, err = support.ExecCommand("bash", "./enable.sh")
-	} else {
-		_, err = support.ExecCommand("bash", "./disable.sh")
+func GetPid(t string) (string, error) {
+	if t == "ssr" {
+		return getSSRPid()
+	} else if t == "v2ray" {
+		return getV2rayPid()
+	} else if t == "script" {
+		return getScriptInfo()
 	}
-	return err
+	return "", errors.New("错误的类型:" + t)
 }
 
-func StartUp(t string) error {
+func StartUp(t string) (string, error) {
 	if t == "ssr" {
 		err := startUpSsr()
 		if err != nil {
-			return err
+			return "", err
 		}
-		return nil
-	}
-	if t == "v2ray" {
+		return getSSRPid()
+	} else if t == "v2ray" {
 		err := startUpV2ray()
 		if err != nil {
+			return "", err
+		}
+		return getV2rayPid()
+	} else if t == "script" {
+		err := startScript()
+		if err != nil {
+			return "", err
+		}
+		return getScriptInfo()
+	}
+
+	return "", errors.New("错误的类型:" + t)
+}
+
+func StopProxy(t string, pid string) error {
+	if t == "ssr" {
+		return killProcess(pid)
+	} else if t == "v2ray" {
+		return killProcess(pid)
+	} else if t == "script" {
+		return stopScript()
+	}
+	return errors.New("错误的类型:" + t)
+}
+
+func ApplyProxyConfig(t string, data string) error {
+	if len(data) <= 0 {
+		return errors.New("缺少数据")
+	}
+
+	var kv map[string]string
+	json.Unmarshal([]byte(data), &kv)
+	key := kv["id"]
+
+	cpath := path.Join(support.SubCacheFolder(), key+".json")
+	if !support.Exists(cpath) {
+		return errors.New("配置文件不存在，请更新订阅")
+	}
+
+	if t == "v2ray" {
+		err := applyV2rayConfig(cpath)
+		if err != nil {
 			return err
 		}
+		support.PutC("v2ray", data)
+		return nil
+	} else if t == "ssr" {
+		applySsrConfig(cpath)
+		support.PutC("ssr", data)
 		return nil
 	}
 
-	return errors.New("error type")
+	return errors.New("错误的类型")
 }
 
-func KillProcess(pid string) error {
-	_, err := support.ExecCommand("kill", "-9", pid)
-	return err
-}
-
-func ComponentStatus() (map[string]string, error) {
-	var temp = make(map[string]string)
-
-	// iptables相关的配置以ip_forward为准
-	str, err := support.ExecCommand("sysctl", "-n", "net.ipv4.ip_forward")
-	if err != nil {
-		return nil, err
-	}
-	temp["routeConfig"] = strings.TrimSpace(str)
-
-	str, err = support.ExecCommand("pidof", "v2ray")
-	if err != nil {
-		return nil, err
-	}
-	temp["v2rayPid"] = strings.TrimSpace(str)
-	return temp, nil
-}
-
-func ClearLog(t string) error {
-	if t == "access" {
-		_, err := support.ExecCommand("rm", "-rf", support.AccessLogFile())
-		if err != nil {
-			return err
-		}
-	}
-	if t == "error" {
-		_, err := support.ExecCommand("rm", "-rf", support.ErrorLogFile())
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func GetLog(t string) (string, error) {
-	if t == "access" {
-		return support.ExecCommand("cat", support.AccessLogFile())
-	}
-	if t == "error" {
-		return support.ExecCommand("cat", support.ErrorLogFile())
-	}
-	return "", nil
-}
-
-func ApplyConfig(t string, key string) error {
-	if len(key) <= 0 {
-		return errors.New("error key")
-	}
-	if t == "access" {
-		return applyV2rayConfig(key)
-	}
-	if t == "error" {
-		return applySsrConfig(key)
-	}
-	return errors.New("error type")
+func ForwardSwitch(tag string) error {
+	return forwardSwitch(tag == "1")
 }

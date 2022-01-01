@@ -1,168 +1,60 @@
 package api
 
 import (
-	"encoding/json"
+	"fmt"
 	"mmm3w/go-proxy/proxy"
 	"mmm3w/go-proxy/subscribe"
 	"mmm3w/go-proxy/support"
 	"net/http"
 	"net/url"
-	"os"
-	"path"
-	"strconv"
 )
 
-func SaveConfig(w http.ResponseWriter, r *http.Request) {
-	support.Post(w, r, func(data url.Values) (int, string) {
-		currentFolder, _ := os.Getwd()
-		targetFile := path.Join(currentFolder, support.ConfigTempFile)
-		source := make(map[string]string)
-		for k := range data {
-			v := support.GetValue(data, k, "")
-			if len(v) > 0 {
-				source[k] = v
+func HandleConfig(w http.ResponseWriter, r *http.Request) {
+	var code int
+	var message string
+	if r.Method == "POST" {
+		fmt.Println("Post coming")
+		r.ParseMultipartForm(32 << 20)
+		key := support.GetValue(r.PostForm, "key", "")
+		value := support.GetValue(r.PostForm, "value", "")
+		if key == "" {
+			code, message = 500, "缺少Key"
+		} else {
+			support.PutC(key, value)
+			code, message = 200, ""
+		}
+	} else if r.Method == "GET" {
+		fmt.Println("Get coming")
+		r.ParseForm()
+		queryForm, err := url.ParseQuery(r.URL.RawQuery)
+		if err != nil {
+			code, message = 500, err.Error()
+		} else {
+			key := support.GetValue(queryForm, "key", "")
+			if key == "" {
+				code, message = 500, "缺少Key"
+			} else {
+				code, message = 200, support.GetC(key)
 			}
 		}
-		err := support.AppendConfig(targetFile, source)
-		if err != nil {
-			return 500, err.Error()
-		}
-		return 200, "success"
-	})
-}
-
-func GetConfig(w http.ResponseWriter, r *http.Request) {
-	support.GetJson(w, r, func(data url.Values) (int, string) {
-		currentFolder, _ := os.Getwd()
-		targetFile := path.Join(currentFolder, support.ConfigTempFile)
-		source, err := support.LoadConfig(targetFile)
-		if err != nil {
-			return 500, err.Error()
-		}
-		jsonStr, err := json.Marshal(source)
-		if err != nil {
-			return 500, err.Error()
-		}
-		return 200, string(jsonStr)
-	})
-}
-
-func ProxyStatus(w http.ResponseWriter, r *http.Request) {
-	support.GetJson(w, r, func(form url.Values) (int, string) {
-		data, err := proxy.ComponentStatus()
-		if err != nil {
-			return 500, err.Error()
-		}
-		jsonStr, err := json.Marshal(data)
-		if err != nil {
-			return 500, err.Error()
-		}
-		return 200, string(jsonStr)
-	})
-}
-
-func EnableRouteConfig(w http.ResponseWriter, r *http.Request) {
-	support.PostJson(w, r, func(form url.Values) (int, string) {
-		isEnable, _ := strconv.ParseBool(support.GetValue(form, "isEnable", "false"))
-
-		err := proxy.ApplyRule(isEnable)
-		if err != nil {
-			return 500, err.Error()
-		}
-
-		data, err := proxy.ComponentStatus()
-		if err != nil {
-			return 500, err.Error()
-		}
-		jsonStr, err := json.Marshal(data)
-		if err != nil {
-			return 500, err.Error()
-		}
-		return 200, string(jsonStr)
-	})
-}
-
-func KillProxyProcess(w http.ResponseWriter, r *http.Request) {
-	support.PostJson(w, r, func(form url.Values) (int, string) {
-		pid := support.GetValue(form, "pid", "")
-		if len(pid) <= 0 {
-			return 500, "No pid"
-		}
-		err := proxy.KillProcess(pid)
-		if err != nil {
-			return 500, err.Error()
-		}
-
-		data, err := proxy.ComponentStatus()
-		if err != nil {
-			return 500, err.Error()
-		}
-		jsonStr, err := json.Marshal(data)
-		if err != nil {
-			return 500, err.Error()
-		}
-		return 200, string(jsonStr)
-	})
-}
-
-func StartUpProxyProcess(w http.ResponseWriter, r *http.Request) {
-	support.PostJson(w, r, func(form url.Values) (int, string) {
-		t := support.GetValue(form, "type", "")
-
-		err := proxy.StartUp(t)
-		if err != nil {
-			return 500, err.Error()
-		}
-
-		data, err := proxy.ComponentStatus()
-		if err != nil {
-			return 500, err.Error()
-		}
-		jsonStr, err := json.Marshal(data)
-		if err != nil {
-			return 500, err.Error()
-		}
-		return 200, string(jsonStr)
-	})
-}
-
-func GetLog(w http.ResponseWriter, r *http.Request) {
-	support.Get(w, r, func(form url.Values) (int, string) {
-		t := support.GetValue(form, "type", "")
-		result, err := proxy.GetLog(t)
-		if err != nil {
-			return 500, err.Error()
-		}
-		return 200, result
-	})
-}
-
-func ClearLog(w http.ResponseWriter, r *http.Request) {
-	support.Post(w, r, func(form url.Values) (int, string) {
-		t := support.GetValue(form, "type", "")
-		err := proxy.ClearLog(t)
-		if err != nil {
-			return 500, err.Error()
-		}
-		return 200, "sucess"
-	})
+	} else {
+		code, message = 403, "Error"
+	}
+	w.WriteHeader(code)
+	fmt.Fprint(w, message)
 }
 
 func UpdateSub(w http.ResponseWriter, r *http.Request) {
 	support.Post(w, r, func(data url.Values) (int, string) {
-		tag := support.GetValue(data, "tag", "")
-		if len(tag) <= 0 {
-			return 500, "no tag"
+		t := support.GetValue(data, "type", "")
+		if len(t) <= 0 {
+			return 500, "订阅更新类型错误"
 		} else {
-			i, err := strconv.Atoi(tag)
-			if err != nil {
-				return 500, err.Error()
-			}
-			err = subscribe.UpdateConfig(i)
+			err := subscribe.UpdateConfig(t)
 			if err != nil {
 				return 500, err.Error()
 			} else {
-				return 200, "sucess"
+				return 200, "更新成功"
 			}
 		}
 	})
@@ -175,19 +67,72 @@ func GetProxyConfig(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			return 500, err.Error()
 		}
-		jsonStr, err := json.Marshal(data)
+		return 200, data
+	})
+}
+
+func CurrentProxyConfig(w http.ResponseWriter, r *http.Request) {
+	support.GetJson(w, r, func(form url.Values) (int, string) {
+		key := support.GetValue(form, "key", "")
+		if key == "" {
+			return 500, "缺少Key"
+		} else {
+			return 200, support.GetC(key)
+		}
+	})
+}
+
+func ProxyRunInfo(w http.ResponseWriter, r *http.Request) {
+	support.Get(w, r, func(form url.Values) (int, string) {
+		t := support.GetValue(form, "type", "")
+		data, err := proxy.GetPid(t)
 		if err != nil {
 			return 500, err.Error()
 		}
-		return 200, string(jsonStr)
+		return 200, data
+	})
+}
+
+func StartProxy(w http.ResponseWriter, r *http.Request) {
+	support.Post(w, r, func(form url.Values) (int, string) {
+		t := support.GetValue(form, "type", "")
+		data, err := proxy.StartUp(t)
+		if err != nil {
+			return 500, err.Error()
+		}
+		return 200, data
+	})
+}
+
+func StopProxy(w http.ResponseWriter, r *http.Request) {
+	support.Post(w, r, func(form url.Values) (int, string) {
+		t := support.GetValue(form, "type", "")
+		pid := support.GetValue(form, "pid", "")
+		err := proxy.StopProxy(t, pid)
+		if err != nil {
+			return 500, err.Error()
+		}
+		return 200, ""
 	})
 }
 
 func ApplyConfig(w http.ResponseWriter, r *http.Request) {
 	support.Post(w, r, func(data url.Values) (int, string) {
-		key := support.GetValue(data, "key", "")
+		d := support.GetValue(data, "data", "")
 		t := support.GetValue(data, "type", "")
-		err := proxy.ApplyConfig(t, key)
+		err := proxy.ApplyProxyConfig(t, d)
+		if err != nil {
+			return 500, err.Error()
+		} else {
+			return 200, "sucess"
+		}
+	})
+}
+
+func JustForward(w http.ResponseWriter, r *http.Request) {
+	support.Post(w, r, func(data url.Values) (int, string) {
+		t := support.GetValue(data, "tag", "")
+		err := proxy.ForwardSwitch(t)
 		if err != nil {
 			return 500, err.Error()
 		} else {

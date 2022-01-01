@@ -3,25 +3,16 @@ package support
 import (
 	"bufio"
 	"bytes"
+	"encoding/base64"
 	"errors"
-	"fmt"
 	"io"
+	"io/ioutil"
 	"net/url"
 	"os"
 	"os/exec"
 	"strings"
 )
 
-func RepairConfig(path string) (map[string]string, error) {
-	data, err := LoadConfig(path)
-	if err != nil {
-		return data, err
-	}
-	err = SaveConfig(path, data)
-	return data, err
-}
-
-//后面的项会覆盖前面的项目
 func LoadConfig(path string) (map[string]string, error) {
 	data := make(map[string]string)
 
@@ -51,38 +42,6 @@ func LoadConfig(path string) (map[string]string, error) {
 	return data, nil
 }
 
-//会覆盖所有配置
-func SaveConfig(path string, data map[string]string) error {
-	file, err := os.OpenFile(path, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0777)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	w := bufio.NewWriter(file)
-	for k, v := range data {
-		updateConfigMemoryCache(k, v)
-		fmt.Fprintf(w, "%s=%s\n", k, v)
-	}
-	return w.Flush()
-}
-
-//在后面追加数据
-func AppendConfig(path string, data map[string]string) error {
-	file, err := os.OpenFile(path, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0777)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	w := bufio.NewWriter(file)
-	for k, v := range data {
-		updateConfigMemoryCache(k, v)
-		fmt.Fprintf(w, "%s=%s\n", k, v)
-	}
-	return w.Flush()
-}
-
 func Exists(path string) bool {
 	_, err := os.Stat(path)
 	if err != nil {
@@ -99,6 +58,35 @@ func GetValue(values url.Values, key string, def string) string {
 	}
 }
 
+func Write(path string, data string) error {
+	file, err := os.OpenFile(path, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0777)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	w := bufio.NewWriter(file)
+	_, err = w.WriteString(data)
+	if err != nil {
+		w.Flush()
+		return err
+	}
+	return w.Flush()
+}
+
+func Read(path string) (string, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+	content, err := ioutil.ReadAll(file)
+	if err != nil {
+		return "", err
+	}
+	return string(content), nil
+}
+
 func ExecCommand(name string, arg ...string) (string, error) {
 	var outInfo bytes.Buffer
 	var stderr bytes.Buffer
@@ -113,4 +101,12 @@ func ExecCommand(name string, arg ...string) (string, error) {
 		}
 	}
 	return outInfo.String(), nil
+}
+
+func NoErrorBase64(source string) string {
+	temp, err := base64.RawURLEncoding.DecodeString(source)
+	if err != nil {
+		return ""
+	}
+	return string(temp)
 }

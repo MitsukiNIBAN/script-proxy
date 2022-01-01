@@ -33,6 +33,22 @@ type V2ray struct {
 	Type string `json:"type"`
 }
 
+type Ssr struct {
+	LocalAddress  string `json:"local_address"`
+	LocalPort     int    `json:"local_port"`
+	Server        string `json:"server"`
+	ServerPort    int    `json:"server_port"`
+	Timeout       int    `json:"timeout"`
+	Workers       int    `json:"workers"`
+	Password      string `json:"password"`
+	Method        string `json:"method"`
+	Obfs          string `json:"obfs"`
+	ObfsParam     string `json:"obfs_param"`
+	Protocol      string `json:"protocol"`
+	ProtocolParam string `json:"protocol_param"`
+	Remarks       string `json:"remarks"`
+}
+
 func updateV2raySub(url string, folder string) error {
 	resp, err := http.Get(url)
 	if err != nil {
@@ -53,7 +69,7 @@ func updateV2raySub(url string, folder string) error {
 		return err
 	}
 
-	configMapping := make(map[string]string)
+	var configData []map[string]string
 
 	v2rCodeList := strings.Split(strings.ReplaceAll(string(firstLevelSource), "\n", ""), "vmess://")
 	for _, item := range v2rCodeList {
@@ -73,29 +89,130 @@ func updateV2raySub(url string, folder string) error {
 
 		err = ioutil.WriteFile(path.Join(folder, fileName), finalData, 0644)
 		if err == nil {
-			configMapping[md5str] = v.Ps + "(" + v.Add + ":" + strconv.Itoa(v.Port) + ")"
+			summaryItem := make(map[string]string)
+			summaryItem["id"] = md5str
+			summaryItem["name"] = v.Ps
+			configData = append(configData, summaryItem)
 		}
 	}
-
-	//保存相关内容方便查询
-	return support.SaveConfig(path.Join(folder, support.V2rayConfigListCache), configMapping)
+	jsonBytes, err := json.Marshal(configData)
+	if err != nil {
+		return err
+	}
+	if jsonBytes == nil {
+		return errors.New("无配置信息")
+	}
+	return support.Write(path.Join(folder, support.V2rayConfigListCache), string(jsonBytes))
 }
 
 func updateSsrSub(url string, folder string) error {
-	return nil
+	resp, err := http.Get(url)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		return errors.New("更新订阅失败:未请求到配置信息")
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	firstLevelSource, err := base64.StdEncoding.DecodeString(string(body))
+	if err != nil {
+		return err
+	}
+
+	var configData []map[string]string
+
+	ssrCodeList := strings.Split(strings.ReplaceAll(string(firstLevelSource), "\n", ""), "ssr://")
+	for _, item := range ssrCodeList {
+		if len(item) <= 0 {
+			continue
+		}
+		finalData, err := base64.RawURLEncoding.DecodeString(item)
+		if err != nil {
+			continue
+		}
+
+		result := strings.Split(string(finalData), ":")
+		if len(result) < 6 {
+			continue
+		}
+
+		var s Ssr
+
+		s.LocalAddress = "0.0.0.0"
+		s.LocalPort = 33334
+		s.Workers = 1
+		s.Timeout = 300
+
+		s.Server = result[0]
+		s.ServerPort, _ = strconv.Atoi(result[1])
+		s.Protocol = result[2]
+		s.Method = result[3]
+		s.Obfs = result[4]
+
+		ns := strings.Split(result[5], "/?")
+
+		if len(result) < 2 {
+			continue
+		}
+
+		s.Password = support.NoErrorBase64(ns[0])
+
+		params := strings.Split(ns[1], "&")
+
+		for _, p := range params {
+			pkv := strings.Split(p, "=")
+			if len(pkv) < 2 {
+				continue
+			}
+			if pkv[0] == "obfs_param" {
+				s.ObfsParam = support.NoErrorBase64(pkv[1])
+				continue
+			}
+			if pkv[0] == "protoparam" {
+				s.ProtocolParam = support.NoErrorBase64(pkv[1])
+				continue
+			}
+			if pkv[0] == "remarks" {
+				s.Remarks = support.NoErrorBase64(pkv[1])
+				continue
+			}
+		}
+
+		md5str := fmt.Sprintf("%x", md5.Sum(finalData))
+		fileName := md5str + ".json"
+		jsonData, _ := json.Marshal(s)
+		err = ioutil.WriteFile(path.Join(folder, fileName), jsonData, 0644)
+		if err == nil {
+			summaryItem := make(map[string]string)
+			summaryItem["id"] = md5str
+			summaryItem["name"] = s.Remarks
+			configData = append(configData, summaryItem)
+		}
+	}
+
+	jsonBytes, err := json.Marshal(configData)
+	if err != nil {
+		return err
+	}
+	if jsonBytes == nil {
+		return errors.New("无配置信息")
+	}
+	return support.Write(path.Join(folder, support.SsrConfigListCache), string(jsonBytes))
 }
 
-func getConfigSet(loadFile string) ([]map[string]string, error) {
-	configMapping, err := support.LoadConfig(loadFile)
+func getConfigSet(loadFile string) (string, error) {
+	data, err := support.Read(loadFile)
 	if err != nil {
-		return nil, err
+		return "[]", err
 	}
-	outData := make([]map[string]string, 0)
-	for k, v := range configMapping {
-		item := make(map[string]string)
-		item["name"] = v
-		item["key"] = k
-		outData = append(outData, item)
+	if data == "" {
+		return "[]", nil
 	}
-	return outData, nil
+	return data, nil
 }

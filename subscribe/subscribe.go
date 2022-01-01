@@ -8,44 +8,38 @@ import (
 	"path"
 )
 
-func UpdateConfig(tag int) error {
-	cacheFolder := support.JsonCacheFolder()
+func UpdateConfig(t string) error {
+	cacheFolder := support.SubCacheFolder()
 	if len(cacheFolder) <= 0 {
-		return errors.New("no cache folder")
+		return errors.New("未配置缓存目录")
+	}
+	if !support.Exists(cacheFolder) {
+		os.MkdirAll(cacheFolder, os.ModePerm)
 	}
 
-	if tag&1 == 1 {
+	if t == "v2ray" {
 		v2rayUrl := support.V2raySubUrl()
-
 		if len(v2rayUrl) > 0 {
-			if !support.Exists(cacheFolder) {
-				os.MkdirAll(cacheFolder, os.ModePerm)
-			}
 			return updateV2raySub(v2rayUrl, cacheFolder)
 		} else {
-			return fmt.Errorf("no v2ray url.(tag:%d)", tag)
+			return fmt.Errorf("缺少v2ray订阅地址(type:%s)", t)
 		}
-	}
-
-	if tag&2 == 2 {
+	} else if t == "ssr" {
 		ssrUrl := support.SsrSubUrl()
 		if len(ssrUrl) > 0 {
-			if !support.Exists(cacheFolder) {
-				os.MkdirAll(cacheFolder, os.ModePerm)
-			}
 			return updateSsrSub(ssrUrl, cacheFolder)
 		} else {
-			return fmt.Errorf("no ssr url.(tag:%d)", tag)
+			return fmt.Errorf("缺少ssr订阅地址.(type:%s)", t)
 		}
 	}
 
-	return fmt.Errorf("error tag:%d", tag)
+	return fmt.Errorf("错误类型:%s", t)
 }
 
-func GetConfigSet(t string) ([]map[string]string, error) {
-	cacheFolder := support.JsonCacheFolder()
+func GetConfigSet(t string) (string, error) {
+	cacheFolder := support.SubCacheFolder()
 	if len(cacheFolder) <= 0 {
-		return nil, errors.New("no cache folder")
+		return "[]", errors.New("未配置缓存目录")
 	}
 
 	if t == "v2ray" {
@@ -56,5 +50,5 @@ func GetConfigSet(t string) ([]map[string]string, error) {
 		return getConfigSet(path.Join(cacheFolder, support.SsrConfigListCache))
 	}
 
-	return nil, errors.New("error type")
+	return "[]", fmt.Errorf("错误类型:%s", t)
 }

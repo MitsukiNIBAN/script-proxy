@@ -2,4 +2,7 @@
 *.exe
 *.conf
 .vscode
+.idea
 .history
+*.sh
+config/
